@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SCM 啤酒遊戲 · 操作說明</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c10;
+    --surface: #111318;
+    --surface2: #181c24;
+    --border: #1e2330;
+    --amber: #f5a623;
+    --amber-dim: #c47d10;
+    --amber-glow: rgba(245,166,35,0.12);
+    --teal: #2dd4bf;
+    --teal-dim: rgba(45,212,191,0.15);
+    --red: #f87171;
+    --red-dim: rgba(248,113,113,0.12);
+    --blue: #60a5fa;
+    --blue-dim: rgba(96,165,250,0.12);
+    --green: #4ade80;
+    --green-dim: rgba(74,222,128,0.12);
+    --text: #e8eaf0;
+    --text-dim: #7a8099;
+    --text-mid: #b0b8cc;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Noto Sans TC', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* ── NOISE TEXTURE ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 0; opacity: 0.4;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    position: relative;
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column;
+    text-align: center;
+    padding: 6rem 2rem 4rem;
+    overflow: hidden;
+  }
+
+  .hero-bg {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 0%, rgba(245,166,35,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 40% at 80% 80%, rgba(45,212,191,0.06) 0%, transparent 50%);
+  }
+
+  .hero-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 60px 60px;
+    mask-image: radial-gradient(ellipse 80% 80% at 50% 40%, black 30%, transparent 80%);
+  }
+
+  .badge {
+    display: inline-block;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--amber);
+    background: var(--amber-glow);
+    border: 1px solid rgba(245,166,35,0.3);
+    padding: 0.35rem 1rem;
+    border-radius: 2rem;
+    margin-bottom: 2rem;
+    position: relative;
+  }
+
+  .hero h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2.8rem, 8vw, 6rem);
+    font-weight: 800;
+    line-height: 1.05;
+    position: relative;
+    background: linear-gradient(135deg, #fff 30%, var(--amber) 80%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-sub {
+    font-size: clamp(1rem, 2.5vw, 1.25rem);
+    color: var(--text-mid);
+    max-width: 600px;
+    margin: 1.5rem auto 0;
+    font-weight: 300;
+    position: relative;
+  }
+
+  .hero-link {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    margin-top: 2.5rem;
+    padding: 0.75rem 2rem;
+    background: var(--amber);
+    color: #0a0c10;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    letter-spacing: 0.05em;
+    text-decoration: none;
+    border-radius: 0.4rem;
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+  }
+  .hero-link:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(245,166,35,0.35); }
+
+  .scroll-hint {
+    position: relative;
+    margin-top: 4rem;
+    color: var(--text-dim);
+    font-size: 0.75rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+  }
+  .scroll-hint::after {
+    content: '';
+    display: block; width: 1px; height: 40px;
+    background: linear-gradient(to bottom, var(--text-dim), transparent);
+    animation: pulse-line 2s ease-in-out infinite;
+  }
+  @keyframes pulse-line { 0%,100% { opacity: 0.3; } 50% { opacity: 1; } }
+
+  /* ── LAYOUT ── */
+  .container { max-width: 1000px; margin: 0 auto; padding: 0 2rem; }
+
+  section { padding: 5rem 0; }
+
+  .section-label {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 0.75rem;
+  }
+
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(1.6rem, 4vw, 2.5rem);
+    font-weight: 800;
+    margin-bottom: 1rem;
+    line-height: 1.15;
+  }
+
+  .section-desc {
+    color: var(--text-mid);
+    max-width: 580px;
+    font-size: 1rem;
+    margin-bottom: 3rem;
+  }
+
+  /* ── DIVIDER ── */
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+  }
+
+  /* ── SUPPLY CHAIN VIZ ── */
+  .chain-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    flex-wrap: wrap;
+    margin: 3rem 0;
+  }
+
+  .chain-node {
+    display: flex; flex-direction: column; align-items: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.8rem;
+    padding: 1.4rem 1.6rem;
+    min-width: 130px;
+    position: relative;
+    transition: border-color 0.25s, transform 0.25s;
+    cursor: default;
+  }
+  .chain-node:hover { border-color: var(--amber); transform: translateY(-4px); }
+
+  .chain-node .icon { font-size: 2rem; margin-bottom: 0.5rem; }
+  .chain-node .label {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700; font-size: 0.85rem;
+    color: var(--text);
+  }
+  .chain-node .role-tag {
+    font-size: 0.65rem; color: var(--text-dim);
+    margin-top: 0.25rem; letter-spacing: 0.08em;
+  }
+
+  .chain-arrow {
+    display: flex; align-items: center; gap: 4px;
+    flex-direction: column;
+    padding: 0 0.5rem;
+  }
+  .arrow-line {
+    width: 50px; height: 1px;
+    background: var(--border);
+    position: relative;
+  }
+  .arrow-line::after {
+    content: '▶'; position: absolute; right: -6px; top: -7px;
+    font-size: 0.5rem; color: var(--amber);
+  }
+  .arrow-back-line {
+    width: 50px; height: 1px;
+    background: var(--border);
+    position: relative;
+  }
+  .arrow-back-line::before {
+    content: '◀'; position: absolute; left: -6px; top: -7px;
+    font-size: 0.5rem; color: var(--teal);
+  }
+  .arrow-label { font-size: 0.55rem; color: var(--text-dim); letter-spacing: 0.05em; white-space: nowrap; }
+  .arrow-label.order { color: var(--teal); }
+  .arrow-label.ship { color: var(--amber); }
+
+  /* ── STEPS ── */
+  .steps { display: flex; flex-direction: column; gap: 1.5rem; }
+
+  .step {
+    display: grid;
+    grid-template-columns: 3rem 1fr;
+    gap: 1.5rem;
+    align-items: start;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.8rem;
+    padding: 1.5rem;
+    transition: border-color 0.2s;
+  }
+  .step:hover { border-color: rgba(245,166,35,0.4); }
+
+  .step-num {
+    width: 3rem; height: 3rem;
+    background: var(--amber-glow);
+    border: 1px solid rgba(245,166,35,0.4);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800; font-size: 1rem;
+    color: var(--amber);
+    flex-shrink: 0;
+  }
+
+  .step-body h3 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700; font-size: 1rem;
+    margin-bottom: 0.4rem;
+  }
+  .step-body p { color: var(--text-mid); font-size: 0.9rem; }
+
+  /* ── COSTS ── */
+  .costs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .cost-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.8rem;
+    padding: 1.5rem;
+    border-top: 3px solid;
+    transition: transform 0.2s;
+  }
+  .cost-card:hover { transform: translateY(-3px); }
+  .cost-card.inventory { border-top-color: var(--blue); background: linear-gradient(135deg, var(--surface), var(--blue-dim)); }
+  .cost-card.backorder { border-top-color: var(--red); background: linear-gradient(135deg, var(--surface), var(--red-dim)); }
+  .cost-card.target   { border-top-color: var(--green); background: linear-gradient(135deg, var(--surface), var(--green-dim)); }
+  .cost-card.chain    { border-top-color: var(--amber); background: linear-gradient(135deg, var(--surface), var(--amber-glow)); }
+
+  .cost-icon { font-size: 1.8rem; margin-bottom: 0.75rem; }
+  .cost-card h3 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.95rem; margin-bottom: 0.35rem; }
+  .cost-num { font-family: 'Syne', sans-serif; font-size: 1.6rem; font-weight: 800; margin-bottom: 0.25rem; }
+  .cost-card.inventory .cost-num { color: var(--blue); }
+  .cost-card.backorder .cost-num { color: var(--red); }
+  .cost-card.target   .cost-num { color: var(--green); }
+  .cost-card.chain    .cost-num { color: var(--amber); }
+  .cost-card p { color: var(--text-dim); font-size: 0.8rem; }
+
+  /* ── PITFALLS ── */
+  .pitfalls { display: flex; flex-direction: column; gap: 1rem; }
+
+  .pitfall {
+    display: flex; gap: 1rem; align-items: flex-start;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--red);
+    border-radius: 0.6rem;
+    padding: 1.2rem;
+  }
+  .pitfall-icon { font-size: 1.4rem; flex-shrink: 0; }
+  .pitfall h4 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.9rem; margin-bottom: 0.25rem; color: var(--red); }
+  .pitfall p { color: var(--text-mid); font-size: 0.85rem; }
+
+  /* ── MULTIGAME ── */
+  .mg-steps {
+    counter-reset: mg;
+    display: flex; flex-direction: column; gap: 1rem;
+  }
+  .mg-step {
+    counter-increment: mg;
+    display: flex; gap: 1.2rem; align-items: flex-start;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.6rem;
+    padding: 1.2rem 1.5rem;
+  }
+  .mg-step::before {
+    content: counter(mg);
+    font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.2rem;
+    color: var(--amber); flex-shrink: 0; min-width: 1.5rem;
+    padding-top: 0.05rem;
+  }
+  .mg-step h4 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.9rem; margin-bottom: 0.2rem; }
+  .mg-step p { color: var(--text-mid); font-size: 0.85rem; }
+
+  /* ── TIPS ── */
+  .tips-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.2rem;
+  }
+  .tip {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.8rem;
+    padding: 1.4rem;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .tip:hover { border-color: var(--teal); transform: translateY(-2px); }
+  .tip-icon { font-size: 1.5rem; margin-bottom: 0.75rem; }
+  .tip h4 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.9rem; margin-bottom: 0.4rem; color: var(--teal); }
+  .tip p { color: var(--text-mid); font-size: 0.85rem; }
+
+  /* ── FOOTER ── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 2.5rem 0;
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 0.8rem;
+  }
+  footer a { color: var(--amber); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+
+  /* ── FADE-IN ── */
+  .fade-in { opacity: 0; transform: translateY(20px); transition: opacity 0.6s ease, transform 0.6s ease; }
+  .fade-in.visible { opacity: 1; transform: translateY(0); }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1rem 2rem;
+    background: rgba(10,12,16,0.7);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-brand {
+    font-family: 'Syne', sans-serif; font-weight: 800;
+    font-size: 0.95rem; color: var(--text);
+    text-decoration: none;
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  .nav-brand span { color: var(--amber); }
+  .nav-links { display: flex; gap: 2rem; }
+  .nav-links a {
+    font-size: 0.8rem; color: var(--text-dim); text-decoration: none;
+    letter-spacing: 0.05em; font-weight: 500;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--amber); }
+
+  @media (max-width: 640px) {
+    .nav-links { display: none; }
+    .chain-wrap { gap: 0.5rem; }
+    .chain-arrow { display: none; }
+    .chain-node { min-width: 100px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a class="nav-brand" href="#"><span>🍺</span> Beer Game SCM</a>
+  <div class="nav-links">
+    <a href="#chain">供應鏈</a>
+    <a href="#rules">規則</a>
+    <a href="#steps">操作步驟</a>
+    <a href="#costs">計費</a>
+    <a href="#multigame">Multigame</a>
+    <a href="#tips">策略技巧</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+  <div class="badge">SCM Supply Chain Simulation</div>
+  <h1>啤酒遊戲<br>操作說明</h1>
+  <p class="hero-sub">Beer Distribution Game — 體驗供應鏈中的「長鞭效應」，學習如何最佳化庫存與訂單決策</p>
+  <a class="hero-link" href="https://beergame.transentis.com/multigame" target="_blank">
+    ▶ 前往遊戲平台
+  </a>
+  <div class="scroll-hint">向下捲動</div>
+</section>
+
+<!-- SUPPLY CHAIN -->
+<section id="chain">
+  <div class="container">
+    <div class="fade-in">
+      <div class="section-label">Supply Chain Structure</div>
+      <div class="section-title">供應鏈角色</div>
+      <p class="section-desc">啤酒遊戲模擬一條完整的供應鏈，從生產端到零售端共有四個角色，每個角色都需要在不確定需求下做出訂單決策。</p>
+    </div>
+    <div class="chain-wrap fade-in">
+      <div class="chain-node">
+        <div class="icon">🏪</div>
+        <div class="label">零售商</div>
+        <div class="role-tag">Retailer</div>
+      </div>
+      <div class="chain-arrow">
+        <div class="arrow-label order">📦 訂單</div>
+        <div class="arrow-back-line"></div>
+        <div class="arrow-line"></div>
+        <div class="arrow-label ship">🍺 出貨</div>
+      </div>
+      <div class="chain-node">
+        <div class="icon">🏬</div>
+        <div class="label">批發商</div>
+        <div class="role-tag">Wholesaler</div>
+      </div>
+      <div class="chain-arrow">
+        <div class="arrow-label order">📦 訂單</div>
+        <div class="arrow-back-line"></div>
+        <div class="arrow-line"></div>
+        <div class="arrow-label ship">🍺 出貨</div>
+      </div>
+      <div class="chain-node">
+        <div class="icon">🚛</div>
+        <div class="label">配銷商</div>
+        <div class="role-tag">Distributor</div>
+      </div>
+      <div class="chain-arrow">
+        <div class="arrow-label order">📦 訂單</div>
+        <div class="arrow-back-line"></div>
+        <div class="arrow-line"></div>
+        <div class="arrow-label ship">🍺 出貨</div>
+      </div>
+      <div class="chain-node">
+        <div class="icon">🏭</div>
+        <div class="label">釀酒廠</div>
+        <div class="role-tag">Brewery</div>
+      </div>
+    </div>
+    <div class="fade-in" style="background:var(--surface);border:1px solid var(--border);border-radius:0.8rem;padding:1.5rem;margin-top:1rem;">
+      <p style="color:var(--text-mid);font-size:0.9rem;">
+        💡 <strong style="color:var(--text);">資訊不對稱</strong>：每個角色只看得到自己的訂單與庫存，無法直接得知最終消費者的真實需求量，這正是長鞭效應的根源。
+      </p>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- GAME MODES -->
+<section id="rules">
+  <div class="container">
+    <div class="fade-in">
+      <div class="section-label">Game Modes</div>
+      <div class="section-title">遊戲模式</div>
+      <p class="section-desc">平台提供三種遊戲模式，適合個人練習或課堂教學使用。</p>
+    </div>
+    <div class="costs-grid fade-in" style="margin-bottom:2rem;">
+      <div class="cost-card inventory" style="border-top-color:var(--blue);">
+        <div class="cost-icon">🧑‍💻</div>
+        <h3>單人模式</h3>
+        <p>固定扮演<strong>零售商</strong>角色，其他角色由 AI 自動控制。適合快速熟悉遊戲機制。</p>
+      </div>
+      <div class="cost-card target" style="border-top-color:var(--green);">
+        <div class="cost-icon">👥</div>
+        <h3>多人模式</h3>
+        <p>由房主分配四個角色給真人或 AI 玩家。支援遠端協作，適合小組實驗。</p>
+      </div>
+      <div class="cost-card chain">
+        <div class="cost-icon">🎯</div>
+        <h3>Multigame 模式</h3>
+        <p>主持人同時開啟多局遊戲，追蹤各組進度，課程結束後比較各組成本表現。</p>
+      </div>
+    </div>
+
+    <!-- OBJECTIVES -->
+    <div class="fade-in">
+      <div class="section-label" style="margin-top:2rem;">Objectives</div>
+      <div class="section-title">遊戲目標</div>
+    </div>
+    <div class="steps fade-in">
+      <div class="step">
+        <div class="step-num">①</div>
+        <div class="step-body">
+          <h3>滿足客戶需求</h3>
+          <p>首要任務是確保客戶訂購的啤酒能夠盡快送達，避免積壓待交訂單（Backorder）。</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">②</div>
+        <div class="step-body">
+          <h3>維持庫存目標</h3>
+          <p>遊戲結束時，庫存目標為 <strong style="color:var(--amber);">400 單位</strong>。庫存需保持穩定，以應對需求波動。</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">③</div>
+        <div class="step-body">
+          <h3>控制個人成本</h3>
+          <p>將自身總成本控制在 <strong style="color:var(--amber);">€7,800</strong> 以下。超額庫存與積壓訂單都會增加成本。</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">④</div>
+        <div class="step-body">
+          <h3>最小化整體供應鏈成本</h3>
+          <p>過度訂購會造成供應鏈震盪，使整體成本上升。全鏈總成本應控制在 <strong style="color:var(--amber);">€29,300</strong> 以下。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- STEPS -->
+<section id="steps">
+  <div class="container">
+    <div class="fade-in">
+      <div class="section-label">Round by Round</div>
+      <div class="section-title">每回合操作流程</div>
+      <p class="section-desc">每個回合依序執行以下動作，系統會自動處理部分步驟，玩家只需專注於最後的訂購決策。</p>
+    </div>
+    <div class="steps fade-in">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h3>📦 確認入庫量</h3>
+          <p>查看本回合從上游供應商收到多少啤酒。若供應商缺貨，到貨量可能少於訂購量，差額成為積壓訂單。</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <h3>📋 確認客戶訂單</h3>
+          <p>查看本回合來自下游客戶（或最終消費者）的訂購量，了解需求規模。</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <h3>🗄️ 核對現有庫存</h3>
+          <p>確認目前倉庫中可出貨的庫存量，評估是否足以應對本回合訂單及可能的待交量。</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <h3>🔎 檢視在途訂單</h3>
+          <p>查看過去已訂購但尚未到貨的訂單記錄，避免重複過度訂購而造成之後庫存爆倉。</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <h3>🚚 自動出貨</h3>
+          <p>系統自動將庫存中的啤酒出貨給客戶。若庫存不足，剩餘需求轉為積壓訂單（Backorder）。<span style="color:var(--text-dim);"> ← 無需手動操作</span></p>
+        </div>
+      </div>
+      <div class="step" style="border-color:rgba(245,166,35,0.5);background:linear-gradient(135deg,var(--surface),var(--amber-glow));">
+        <div class="step-num" style="background:rgba(245,166,35,0.2);border-color:var(--amber);">6</div>
+        <div class="step-body">
+          <h3 style="color:var(--amber);">🍺 決定訂購量 ← 核心決策</h3>
+          <p>輸入本回合向上游供應商的訂購數量。這是唯一需要玩家判斷的步驟，也是影響整體成本的關鍵。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- COSTS -->
+<section id="costs">
+  <div class="container">
+    <div class="fade-in">
+      <div class="section-label">Cost Structure</div>
+      <div class="section-title">計費規則</div>
+      <p class="section-desc">成本由兩部分組成，了解計費規則有助於在庫存與服務水準之間取得平衡。</p>
+    </div>
+    <div class="costs-grid fade-in">
+      <div class="cost-card inventory">
+        <div class="cost-icon">🏭</div>
+        <h3>超額庫存費用</h3>
+        <div class="cost-num">€0.5</div>
+        <p>每單位 / 每週。超過 400 單位以上的庫存，每週計算超額儲存費用。</p>
+      </div>
+      <div class="cost-card backorder">
+        <div class="cost-icon">⏳</div>
+        <h3>積壓訂單費用</h3>
+        <div class="cost-num">€1.0</div>
+        <p>每單位 / 每週。無法即時出貨的訂單轉為積壓，費率是庫存費的兩倍。</p>
+      </div>
+      <div class="cost-card target">
+        <div class="cost-icon">🎯</div>
+        <h3>個人成本目標</h3>
+        <div class="cost-num">€7,800</div>
+        <p>遊戲結束時，個人總成本（庫存＋積壓）應低於此目標值。</p>
+      </div>
+      <div class="cost-card chain">
+        <div class="cost-icon">🌐</div>
+        <h3>全鏈成本目標</h3>
+        <div class="cost-num">€29,300</div>
+        <p>四個角色的成本加總，反映整體供應鏈效率，應控制在此門檻以下。</p>
+      </div>
+    </div>
+    <div class="fade-in" style="background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--amber);border-radius:0.6rem;padding:1.4rem;margin-top:2rem;">
+      <p style="font-size:0.9rem;color:var(--text-mid);">
+        ⚖️ <strong style="color:var(--text);">費率比較</strong>：積壓費（€1）是庫存費（€0.5）的 <strong style="color:var(--amber);">兩倍</strong>，表示缺貨比過庫更貴。但過度囤積也會累積可觀成本，需找到平衡點。
+      </p>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- PITFALLS -->
+<section>
+  <div class="container">
+    <div class="fade-in">
+      <div class="section-label">Common Pitfalls</div>
+      <div class="section-title">常見陷阱</div>
+      <p class="section-desc">即使有清楚的遊戲規則，大多數玩家仍會在以下幾個情境中犯下典型錯誤。</p>
+    </div>
+    <div class="pitfalls fade-in">
+      <div class="pitfall">
+        <div class="pitfall-icon">⏱️</div>
+        <div>
+          <h4>延遲效應（Delay）</h4>
+          <p>訂購的啤酒不會立即到貨，供應商若也缺貨，等待時間更長。玩家常因此在等待期間持續加碼訂購，導致之後大量到貨造成庫存爆增。</p>
+        </div>
+      </div>
+      <div class="pitfall">
+        <div class="pitfall-icon">🌊</div>
+        <div>
+          <h4>長鞭效應（Bullwhip Effect）</h4>
+          <p>下游的小幅需求波動，會被每個環節放大，導致上游（釀酒廠）面臨劇烈的訂單震盪，大幅提升整體成本。</p>
+        </div>
+      </div>
+      <div class="pitfall">
+        <div class="pitfall-icon">😱</div>
+        <div>
+          <h4>恐慌性訂購（Panic Ordering）</h4>
+          <p>看到庫存下降時，人的直覺是大量訂購。但若只是需求短暫上升，過度補貨會在幾週後造成嚴重庫存積壓。</p>
+        </div>
+      </div>
+      <div class="pitfall">
+        <div class="pitfall-icon">🚫</div>
+        <div>
+          <h4>忽視在途訂單</h4>
+          <p>已經訂出去但尚未到貨的訂單仍佔用未來庫存空間。不考慮在途量而反覆下單，是新手最常見的失誤。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- MULTIGAME -->
+<section id="multigame">
+  <div class="container">
+    <div class="fade-in">
+      <div class="section-label">Facilitator Guide</div>
+      <div class="section-title">Multigame 主持人操作</div>
+      <p class="section-desc">Multigame 模式專為課堂教學設計，主持人可同時監控多組遊戲並於結束後進行比較分析。</p>
+    </div>
+    <div class="mg-steps fade-in">
+      <div class="mg-step">
+        <div>
+          <h4>進入 Multigame 頁面</h4>
+          <p>前往 <a href="https://beergame.transentis.com/multigame" target="_blank" style="color:var(--amber);">beergame.transentis.com/multigame</a>，點擊「Create Multigame」開始建立新的多組遊戲。</p>
+        </div>
+      </div>
+      <div class="mg-step">
+        <div>
+          <h4>填寫遊戲基本資訊（Details）</h4>
+          <p>設定遊戲名稱、預計組數與回合數，免費版支援 <strong style="color:var(--amber);">最多 4 組</strong>平行遊戲。</p>
+        </div>
+      </div>
+      <div class="mg-step">
+        <div>
+          <h4>設定預設值（Presets，選填）</h4>
+          <p>可預設初始庫存、需求曲線或隨機種子，確保各組在相同條件下進行，方便控制變數。</p>
+        </div>
+      </div>
+      <div class="mg-step">
+        <div>
+          <h4>撰寫遊戲說明（Description，選填）</h4>
+          <p>為玩家提供情境描述或遊戲背景，增加沉浸感與學習目標引導。</p>
+        </div>
+      </div>
+      <div class="mg-step">
+        <div>
+          <h4>調整遊戲參數（Settings）</h4>
+          <p>設定需求模式（固定 / 隨機 / 自訂）、是否開放 AI 玩家、每回合時間限制等進階選項。</p>
+        </div>
+      </div>
+      <div class="mg-step">
+        <div>
+          <h4>分享邀請連結</h4>
+          <p>建立完成後，系統產生各組專屬連結，分享給學生即可加入指定角色開始遊戲。</p>
+        </div>
+      </div>
+      <div class="mg-step">
+        <div>
+          <h4>即時監控與結果比較</h4>
+          <p>遊戲進行中可從 Dashboard 追蹤各組進度；遊戲結束後比較各組成本曲線，引導課堂討論。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- TIPS -->
+<section id="tips">
+  <div class="container">
+    <div class="fade-in">
+      <div class="section-label">Strategy Tips</div>
+      <div class="section-title">策略技巧</div>
+      <p class="section-desc">以下原則可幫助你在遊戲中取得更好的成本表現。</p>
+    </div>
+    <div class="tips-grid fade-in">
+      <div class="tip">
+        <div class="tip-icon">📐</div>
+        <h4>錨定基礎需求</h4>
+        <p>以近期平均需求為基礎訂購，避免單一回合的異常值影響決策，減少過度反應。</p>
+      </div>
+      <div class="tip">
+        <div class="tip-icon">🔢</div>
+        <h4>計入在途庫存</h4>
+        <p>訂購前先確認在途訂單總量（已訂但未到貨），以免重複補貨造成未來庫存過剩。</p>
+      </div>
+      <div class="tip">
+        <div class="tip-icon">🌊</div>
+        <h4>平滑訂購量</h4>
+        <p>避免大起大落的訂購行為，對供應鏈其他成員釋出穩定信號，降低全鏈的震盪幅度。</p>
+      </div>
+      <div class="tip">
+        <div class="tip-icon">⏳</div>
+        <h4>預測延遲影響</h4>
+        <p>記住訂單通常需要數回合才能到貨，提前規劃而非等缺貨了再補，可有效避免恐慌性訂購。</p>
+      </div>
+      <div class="tip">
+        <div class="tip-icon">🤝</div>
+        <h4>資訊分享（多人局）</h4>
+        <p>在多人模式中，各角色若能分享需求資訊，可顯著降低整體供應鏈的訊息不對稱程度。</p>
+      </div>
+      <div class="tip">
+        <div class="tip-icon">📊</div>
+        <h4>觀察庫存趨勢</h4>
+        <p>持續追蹤庫存曲線，若庫存持續下降則適度增加訂單；若持續上升則克制補貨衝動。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="container">
+    <p style="margin-bottom:0.5rem;">
+      🍺 Beer Distribution Game 由
+      <a href="https://transentis.com" target="_blank">transentis</a> 開發維護
+    </p>
+    <p>
+      <a href="https://beergame.transentis.com/docs/rules" target="_blank">官方規則</a> ·
+      <a href="https://beergame.transentis.com/docs/faq" target="_blank">FAQ</a> ·
+      <a href="https://beergame.transentis.com/multigame" target="_blank">開始遊戲</a>
+    </p>
+    <p style="margin-top:1rem;font-size:0.72rem;color:#4a5068;">
+      本說明文件僅供教學參考使用
+    </p>
+  </div>
+</footer>
+
+<script>
+  // Intersection Observer for fade-in
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) { e.target.classList.add('visible'); }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.fade-in').forEach(el => obs.observe(el));
+</script>
+</body>
+</html>
